@@ -98,7 +98,7 @@ function FileUpload({
 
       const { tokens } = await fetchAuthSession();
       const response = await fetch(
-        "https://kc0jhbt5j0.execute-api.us-east-1.amazonaws.com/dev/generate-upload-url",
+        "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/generate-upload-url",
         {
           method: "POST",
           headers: {
@@ -310,7 +310,7 @@ function FileList({
       setUserSub(payload?.sub as unknown as string);
 
       const response = await fetch(
-        `https://kc0jhbt5j0.execute-api.us-east-1.amazonaws.com/dev/list-files?path=${currentPath}`,
+        `https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/list-folders`,
         {
           headers: {
             Authorization: tokens?.idToken?.toString() as string,
@@ -343,7 +343,7 @@ function FileList({
 
       const { tokens } = await fetchAuthSession();
       const response = await fetch(
-        "https://kc0jhbt5j0.execute-api.us-east-1.amazonaws.com/dev/generate-download-url",
+        "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/generate-download-url",
         {
           method: "POST",
           headers: {
@@ -381,7 +381,7 @@ function FileList({
 
       const { tokens } = await fetchAuthSession();
       const response = await fetch(
-        "https://kc0jhbt5j0.execute-api.us-east-1.amazonaws.com/dev/delete-file",
+        "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/delete-file",
         {
           method: "POST",
           headers: {
@@ -414,7 +414,7 @@ function FileList({
 
       const { tokens } = await fetchAuthSession();
       const response = await fetch(
-        "https://kc0jhbt5j0.execute-api.us-east-1.amazonaws.com/dev/move-file",
+        "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/move-file",
         {
           method: "POST",
           headers: {
