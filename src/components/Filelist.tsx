@@ -271,8 +271,6 @@ function FileUpload({
 
 function FileList({
   refreshTrigger,
-  // onPathChange,
-  // currentPath = "/",
   hasRole,
 }: {
   refreshTrigger: number;
@@ -498,15 +496,21 @@ function FileList({
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
-  const filteredFiles = allFiles.filter((file) => {
-    const matchesSearchQuery = searchQuery
-      ? file.fileName.toLowerCase().includes(searchQuery.toLowerCase())
-      : true;
+  const filteredFiles = allFiles
+    .filter((file) => {
+      const matchesSearchQuery = searchQuery
+        ? file.fileName.toLowerCase().includes(searchQuery.toLowerCase())
+        : true;
 
-    const matchesPath = searchQuery ? true : file.key.startsWith(currentPath);
+      if (currentPath === "") {
+        return matchesSearchQuery;
+      }
 
-    return matchesSearchQuery && matchesPath;
-  });
+      const matchesPath = file.key.startsWith(currentPath);
+      return matchesSearchQuery && matchesPath;
+    })
+    .sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime())
+    .slice(0, currentPath === "" ? 5 : allFiles.length);
 
   const currentFolders = folders.filter(
     (folder) => folder.startsWith(currentPath) && folder !== currentPath
@@ -515,8 +519,6 @@ function FileList({
   const onPathChange = (newPath: React.SetStateAction<string>) => {
     setCurrentPath(newPath);
   };
-
-  console.log(currentPath);
 
   if (loading) {
     return (
