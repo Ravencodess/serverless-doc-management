@@ -10,8 +10,8 @@ import {
   LogOut,
   Home,
   Folder,
-  ArrowRight,
   Search,
+  ArrowLeft,
 } from "lucide-react";
 
 interface File {
@@ -87,7 +87,7 @@ function FileUpload({
     }
 
     const uploadPath = customPath || currentPath;
-    if (!canUploadToPath(uploadPath)) {
+    if (!canUploadToPath(uploadPath!)) {
       setError("You do not have permission to upload to this location");
       return;
     }
@@ -98,7 +98,7 @@ function FileUpload({
 
       const { tokens } = await fetchAuthSession();
       const response = await fetch(
-        "https://kc0jhbt5j0.execute-api.us-east-1.amazonaws.com/dev/generate-upload-url",
+        "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/generate-upload-url",
         {
           method: "POST",
           headers: {
@@ -160,7 +160,7 @@ function FileUpload({
     }
   };
 
-  if (!canUploadToPath(currentPath)) {
+  if (!canUploadToPath(currentPath!)) {
     return null;
   }
 
@@ -271,8 +271,8 @@ function FileUpload({
 
 function FileList({
   refreshTrigger,
-  onPathChange,
-  currentPath = "/",
+  // onPathChange,
+  // currentPath = "/",
   hasRole,
 }: {
   refreshTrigger: number;
@@ -282,7 +282,7 @@ function FileList({
   userGroups: string[];
   hasRole: (role: string) => boolean;
 }) {
-  const [files, setFiles] = useState<File[]>([]);
+  const [currentPath, setCurrentPath] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadLoading, setDownloadLoading] = useState<
@@ -296,7 +296,7 @@ function FileList({
   const [fileToMove, setFileToMove] = useState<File | null>(null);
   const [moveDestination, setMoveDestination] = useState("");
   const [folders, setFolders] = useState<string[]>([]);
-  const [, setUserSub] = useState<string | null>(null);
+  const [allFiles, setAllFiles] = useState<File[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showMoveModal, setShowMoveModal] = useState(false);
@@ -305,24 +305,17 @@ function FileList({
     try {
       setLoading(true);
       const { tokens } = await fetchAuthSession();
-
-      const payload = tokens?.idToken?.payload;
-      setUserSub(payload?.sub as unknown as string);
-
       const response = await fetch(
-        `https://kc0jhbt5j0.execute-api.us-east-1.amazonaws.com/dev/list-files?path=${currentPath}`,
+        "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/list-files",
         {
           headers: {
             Authorization: tokens?.idToken?.toString() as string,
           },
         }
       );
-
       if (!response.ok) throw new Error("Failed to fetch files");
-
       const data = await response.json();
-      setFiles(data.files);
-      setFolders(data.folders);
+      setAllFiles(data.files);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "An unknown error occurred"
@@ -332,10 +325,31 @@ function FileList({
     }
   };
 
+  const fetchFolders = async () => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const response = await fetch(
+        "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/list-folders",
+        {
+          headers: {
+            Authorization: tokens?.idToken?.toString() as string,
+          },
+        }
+      );
+      if (!response.ok) throw new Error("Failed to fetch folders");
+      const data = await response.json();
+      setFolders(data.folders);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
+    }
+  };
+
   useEffect(() => {
     fetchFiles();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPath, refreshTrigger]);
+    fetchFolders();
+  }, [refreshTrigger]);
 
   const handleDownload = async (fileKey: string, fileName: string) => {
     try {
@@ -343,7 +357,7 @@ function FileList({
 
       const { tokens } = await fetchAuthSession();
       const response = await fetch(
-        "https://kc0jhbt5j0.execute-api.us-east-1.amazonaws.com/dev/generate-download-url",
+        "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/generate-download-url",
         {
           method: "POST",
           headers: {
@@ -358,12 +372,19 @@ function FileList({
 
       const { downloadUrl } = await response.json();
 
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Open the download URL in a new tab (target="_blank")
+      const newTab = window.open(downloadUrl, "_blank");
+
+      if (newTab) {
+        newTab.focus();
+      } else {
+        const link = document.createElement("a");
+        link.href = downloadUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     } catch (err) {
       setError(
         `Failed to download ${fileName}: ${
@@ -381,7 +402,7 @@ function FileList({
 
       const { tokens } = await fetchAuthSession();
       const response = await fetch(
-        "https://kc0jhbt5j0.execute-api.us-east-1.amazonaws.com/dev/delete-file",
+        "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/delete-file",
         {
           method: "POST",
           headers: {
@@ -394,7 +415,7 @@ function FileList({
 
       if (!response.ok) throw new Error("Failed to delete file");
 
-      setFiles((prev) => prev.filter((file) => file.key !== fileKey));
+      setAllFiles((prev) => prev.filter((file) => file.key !== fileKey));
       setFileToDelete(null);
       setShowDeleteModal(false);
     } catch (err) {
@@ -414,7 +435,7 @@ function FileList({
 
       const { tokens } = await fetchAuthSession();
       const response = await fetch(
-        "https://kc0jhbt5j0.execute-api.us-east-1.amazonaws.com/dev/move-file",
+        "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/move-file",
         {
           method: "POST",
           headers: {
@@ -430,7 +451,7 @@ function FileList({
 
       if (!response.ok) throw new Error("Failed to move file");
 
-      setFiles((prev) => prev.filter((file) => file.key !== fileKey));
+      setAllFiles((prev) => prev.filter((file) => file.key !== fileKey));
       fetchFiles();
       setFileToMove(null);
       setMoveDestination("");
@@ -477,10 +498,25 @@ function FileList({
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
+  const filteredFiles = allFiles.filter((file) => {
+    const matchesSearchQuery = searchQuery
+      ? file.fileName.toLowerCase().includes(searchQuery.toLowerCase())
+      : true;
 
-  const filteredFiles = files.filter((file) =>
-    file.fileName.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesPath = searchQuery ? true : file.key.startsWith(currentPath);
+
+    return matchesSearchQuery && matchesPath;
+  });
+
+  const currentFolders = folders.filter(
+    (folder) => folder.startsWith(currentPath) && folder !== currentPath
   );
+
+  const onPathChange = (newPath: React.SetStateAction<string>) => {
+    setCurrentPath(newPath);
+  };
+
+  console.log(currentPath);
 
   if (loading) {
     return (
@@ -538,32 +574,26 @@ function FileList({
           {currentPath && (
             <button
               onClick={() =>
-                onPathChange(
-                  currentPath.split("/").slice(0, -2).join("/") + "/"
-                )
+                onPathChange(currentPath.split("/").slice(0, -2).join("/"))
               }
-              className="flex items-center p-4 border rounded hover:bg-gray-50"
+              className="flex items-center justify-start"
             >
-              <ArrowRight className="mr-2 rotate-180" size={16} />
+              <ArrowLeft className="mr-2" size={16} />
               Back
             </button>
           )}
-          {folders.map((folder) => {
-            const folderName = folder.split("/").filter(Boolean).pop();
-            return (
-              <button
-                key={folder}
-                onClick={() => onPathChange(folder)}
-                className="flex items-center p-4 border rounded hover:bg-gray-50"
-              >
-                <Folder className="mr-2" size={16} />
-                {folderName}
-              </button>
-            );
-          })}
+          {currentFolders.map((folder) => (
+            <button
+              key={folder}
+              onClick={() => onPathChange(folder)}
+              className="flex items-center justify-start"
+            >
+              <Folder className="mr-2" size={16} />
+              {folder.split("/").filter(Boolean).pop()}
+            </button>
+          ))}
         </div>
       </div>
-
       <div className="mb-4">
         <label htmlFor="search" className="sr-only">
           Search files
@@ -603,59 +633,75 @@ function FileList({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredFiles.map((file) => (
-                <tr key={file.key} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {file.fileName}
-                    {file.userOwned && (
-                      <span className="ml-2 text-xs text-blue-600">
-                        (My File)
+              {filteredFiles.map((file) => {
+                const highlightText = (text: string, query: string) => {
+                  if (!query) return text;
+                  const regex = new RegExp(`(${query})`, "gi");
+                  return text.split(regex).map((part, index) =>
+                    regex.test(part) ? (
+                      <span key={index} className="bg-yellow-300">
+                        {part}
                       </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatFileSize(file.size)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(file.lastModified)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <button
-                      onClick={() => handleDownload(file.key, file.fileName)}
-                      disabled={downloadLoading[file.key]}
-                      className="mr-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-                    >
-                      <Download className="inline-block mr-1" size={16} />
-                      {downloadLoading[file.key]
-                        ? "Downloading..."
-                        : "Download"}
-                    </button>
+                    ) : (
+                      part
+                    )
+                  );
+                };
 
-                    {(hasRole("superadmin") ||
-                      hasRole("contentmanager") ||
-                      (hasRole("author") && file.userOwned)) && (
-                      <>
-                        <button
-                          onClick={() => handleDeleteClick(file)}
-                          disabled={deleteLoading[file.key]}
-                          className="mr-2 px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
-                        >
-                          <Trash2 className="inline-block mr-1" size={16} />
-                          {deleteLoading[file.key] ? "Deleting..." : "Delete"}
-                        </button>
-                        <button
-                          onClick={() => handleMoveClick(file)}
-                          disabled={moveLoading[file.key]}
-                          className="px-3 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
-                        >
-                          <Move className="inline-block mr-1" size={16} />
-                          {moveLoading[file.key] ? "Moving..." : "Move"}
-                        </button>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                return (
+                  <tr key={file.key} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {highlightText(file.fileName, searchQuery)}
+                      {file.userOwned && (
+                        <span className="ml-2 text-xs text-blue-600">
+                          (My File)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatFileSize(file.size)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(file.lastModified)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <button
+                        onClick={() => handleDownload(file.key, file.fileName)}
+                        disabled={downloadLoading[file.key]}
+                        className="mr-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                      >
+                        <Download className="inline-block mr-1" size={16} />
+                        {downloadLoading[file.key]
+                          ? "Downloading..."
+                          : "Download"}
+                      </button>
+
+                      {(hasRole("superadmin") ||
+                        hasRole("contentmanager") ||
+                        (hasRole("author") && file.userOwned)) && (
+                        <>
+                          <button
+                            onClick={() => handleDeleteClick(file)}
+                            disabled={deleteLoading[file.key]}
+                            className="mr-2 px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+                          >
+                            <Trash2 className="inline-block mr-1" size={16} />
+                            {deleteLoading[file.key] ? "Deleting..." : "Delete"}
+                          </button>
+                          <button
+                            onClick={() => handleMoveClick(file)}
+                            disabled={moveLoading[file.key]}
+                            className="px-3 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
+                          >
+                            <Move className="inline-block mr-1" size={16} />
+                            {moveLoading[file.key] ? "Moving..." : "Move"}
+                          </button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

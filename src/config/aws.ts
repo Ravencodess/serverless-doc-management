@@ -17,7 +17,7 @@ const awsConfig = {
         endpoints: [
             {
                 name: 'DocManagementAPI',
-                endpoint: 'https://kc0jhbt5j0.execute-api.us-east-1.amazonaws.com/dev',
+                endpoint: 'https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api',
                 region: 'us-east-1'
             }
         ]
