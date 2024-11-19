@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useAuthenticator } from "@aws-amplify/ui-react";
 import { fetchAuthSession } from "aws-amplify/auth";
+import Layout from "../pages/dashlayout";
 import {
-  User,
   X,
   Download,
   Trash2,
   Move,
-  LogOut,
-  Home,
   Folder,
   Search,
   ArrowLeft,
@@ -509,7 +507,10 @@ function FileList({
       const matchesPath = file.key.startsWith(currentPath);
       return matchesSearchQuery && matchesPath;
     })
-    .sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime())
+    .sort(
+      (a, b) =>
+        new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
+    )
     .slice(0, currentPath === "" ? 5 : allFiles.length);
 
   const currentFolders = folders.filter(
@@ -578,7 +579,7 @@ function FileList({
               onClick={() =>
                 onPathChange(currentPath.split("/").slice(0, -2).join("/"))
               }
-              className="flex items-center justify-start"
+              className="flex items-center justify-start cursor-pointer"
             >
               <ArrowLeft className="mr-2" size={16} />
               Back
@@ -617,6 +618,9 @@ function FileList({
         <p className="text-gray-500">No files available.</p>
       ) : (
         <div className="overflow-x-auto">
+          <p className="text-left my-4">
+            {currentPath === "" && "Recent Files"}
+          </p>
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -783,8 +787,156 @@ function FileList({
   );
 }
 
+// export default function Dashboard() {
+//   const { user, signOut } = useAuthenticator((context) => [context.user]);
+//   const [error, setError] = useState<string | null>(null);
+//   const [currentPath, setCurrentPath] = useState<string | undefined>();
+//   const [refreshKey, setRefreshKey] = useState(0);
+//   const [username, setUsername] = useState("");
+//   const [userGroups, setUserGroups] = useState<string[]>([]);
+//   const [loading, setLoading] = useState(true);
+
+//   const hasRole = (role: string) => {
+//     if (typeof userGroups === "string") {
+//       return userGroups === role;
+//     }
+//     return Array.isArray(userGroups) && userGroups.includes(role);
+//   };
+
+//   useEffect(() => {
+//     const getUserInfo = async () => {
+//       try {
+//         const { tokens } = await fetchAuthSession();
+//         const payload = tokens?.idToken?.payload;
+//         if (payload) {
+//           setUsername(payload["cognito:username"] as unknown as string);
+//           const groups = payload["cognito:groups"] || [];
+//           setUserGroups(
+//             typeof groups === "string" ? [groups] : (groups as string[])
+//           );
+//         }
+//       } catch (err) {
+//         setError(
+//           err instanceof Error ? err.message : "An unknown error occurred"
+//         );
+//       } finally {
+//         setLoading(false);
+//       }
+//     };
+
+//     getUserInfo();
+//   }, []);
+
+//   const handlePathChange = (newPath: string) => {
+//     const normalizedPath = newPath.endsWith("/") ? newPath : `${newPath}/`;
+//     setCurrentPath(normalizedPath);
+
+//     if (hasRole("author") && !normalizedPath.startsWith(`${username}/`)) {
+//       setError("Note: You can only upload files in your personal folder.");
+//     } else {
+//       setError(null);
+//     }
+//   };
+
+//   const handleUploadComplete = () => {
+//     setRefreshKey((prev) => prev + 1);
+//   };
+
+//   if (loading) {
+//     return (
+//       <div className="flex min-h-screen items-center justify-center">
+//         <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-t-2 border-blue-500"></div>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
+//       {/* side bar */}
+//       <aside className="w-64 bg-white shadow-md dark:bg-gray-800">
+//         <div className="p-4">
+//           <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+//             Dashboard
+//           </h2>
+//         </div>
+//         <nav className="mt-4">
+//           <a
+//             href="#"
+//             className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-700"
+//           >
+//             <Home className="mr-2 h-5 w-5" />
+//             Home
+//           </a>
+//           <a
+//             href="#"
+//             className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-700"
+//           >
+//             <Folder className="mr-2 h-5 w-5" />
+//             Files
+//           </a>
+//           <a
+//             href="#"
+//             className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-700"
+//           >
+//             <User className="mr-2 h-5 w-5" />
+//             Profile
+//           </a>
+//           <div className="absolute bottom-4 ">
+//             <button
+//               onClick={signOut}
+//               className="flex items-center px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200"
+//             >
+//               <LogOut className="mr-2 h-5 w-5" />
+//               Sign Out
+//             </button>
+//           </div>
+//         </nav>
+//       </aside>
+//       {/* children */}
+//       <main className="flex-1 overflow-y-auto p-8">
+//         <div className="mx-auto max-w-4xl">
+//           <header className="mb-8">
+//             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+//               Welcome, {user?.username || "User"}
+//             </h1>
+//             <p className="mt-2 text-gray-600 dark:text-gray-400">
+//               Manage your files and folders
+//             </p>
+//           </header>
+
+//           <div className="mb-8">
+//             <FileUpload
+//               currentPath={currentPath}
+//               userGroups={userGroups}
+//               username={username}
+//               onUploadComplete={handleUploadComplete}
+//             />
+//           </div>
+
+//           <div>
+//             <FileList
+//               refreshTrigger={refreshKey}
+//               onPathChange={handlePathChange}
+//               currentPath={currentPath}
+//               username={username}
+//               userGroups={userGroups}
+//               hasRole={hasRole}
+//             />
+//           </div>
+
+//           {error && (
+//             <div className="mt-4 rounded-lg bg-red-100 p-4 text-red-700 dark:bg-red-900 dark:text-red-200">
+//               {error}
+//             </div>
+//           )}
+//         </div>
+//       </main>
+//     </div>
+//   );
+// }
+
 export default function Dashboard() {
-  const { user, signOut } = useAuthenticator((context) => [context.user]);
+  const { signOut } = useAuthenticator((context) => [context.user]);
   const [error, setError] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState<string | undefined>();
   const [refreshKey, setRefreshKey] = useState(0);
@@ -847,85 +999,34 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
-      <aside className="w-64 bg-white shadow-md dark:bg-gray-800">
-        <div className="p-4">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-            Dashboard
-          </h2>
+    <Layout username={username} signOut={signOut}>
+      <>
+        <div className="mb-8">
+          <FileUpload
+            currentPath={currentPath}
+            userGroups={userGroups}
+            username={username}
+            onUploadComplete={handleUploadComplete}
+          />
         </div>
-        <nav className="mt-4">
-          <a
-            href="#"
-            className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-700"
-          >
-            <Home className="mr-2 h-5 w-5" />
-            Home
-          </a>
-          <a
-            href="#"
-            className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-700"
-          >
-            <Folder className="mr-2 h-5 w-5" />
-            Files
-          </a>
-          <a
-            href="#"
-            className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-700"
-          >
-            <User className="mr-2 h-5 w-5" />
-            Profile
-          </a>
-          <div className="absolute bottom-4 ">
-            <button
-              onClick={signOut}
-              className="flex items-center px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200"
-            >
-              <LogOut className="mr-2 h-5 w-5" />
-              Sign Out
-            </button>
-          </div>
-        </nav>
-      </aside>
 
-      <main className="flex-1 overflow-y-auto p-8">
-        <div className="mx-auto max-w-4xl">
-          <header className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Welcome, {user?.username || "User"}
-            </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
-              Manage your files and folders
-            </p>
-          </header>
-
-          <div className="mb-8">
-            <FileUpload
-              currentPath={currentPath}
-              userGroups={userGroups}
-              username={username}
-              onUploadComplete={handleUploadComplete}
-            />
-          </div>
-
-          <div>
-            <FileList
-              refreshTrigger={refreshKey}
-              onPathChange={handlePathChange}
-              currentPath={currentPath}
-              username={username}
-              userGroups={userGroups}
-              hasRole={hasRole}
-            />
-          </div>
-
-          {error && (
-            <div className="mt-4 rounded-lg bg-red-100 p-4 text-red-700 dark:bg-red-900 dark:text-red-200">
-              {error}
-            </div>
-          )}
+        <div>
+          <FileList
+            refreshTrigger={refreshKey}
+            onPathChange={handlePathChange}
+            currentPath={currentPath}
+            username={username}
+            userGroups={userGroups}
+            hasRole={hasRole}
+          />
         </div>
-      </main>
-    </div>
+
+        {error && (
+          <div className="mt-4 rounded-lg bg-red-100 p-4 text-red-700 dark:bg-red-900 dark:text-red-200">
+            {error}
+          </div>
+        )}
+      </>
+    </Layout>
   );
 }
