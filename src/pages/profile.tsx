@@ -10,6 +10,7 @@ import {
   UserMinus,
   Lock,
   Unlock,
+  ChevronDown,
 } from "lucide-react";
 import Layout from "./dashlayout";
 
@@ -26,6 +27,7 @@ interface User {
 }
 
 export default function Profile() {
+  const roles = ["author", "contentmanager", "viewer", "superadmin"];
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,6 +35,8 @@ export default function Profile() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [userGroups, setUserGroups] = useState<string[]>([]);
+  const [selectedRole, setSelectedRole] = useState(roles[0]);
+  const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
 
   async function fetchUserProfile() {
     try {
@@ -180,8 +184,6 @@ export default function Profile() {
     }
   }
 
-  console.log(user);
-
   useEffect(() => {
     const getUserInfo = async () => {
       try {
@@ -321,6 +323,96 @@ export default function Profile() {
               {hasRole("superadmin") && (
                 <div className="mt-4">
                   <h3 className="text-lg font-semibold mb-2">Manage User</h3>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <div className="relative">
+                      <button
+                        onClick={() =>
+                          setIsRoleDropdownOpen(!isRoleDropdownOpen)
+                        }
+                        className="bg-white border border-gray-300 rounded-md px-4 py-2 inline-flex items-center text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      >
+                        {selectedRole}
+                        <ChevronDown
+                          className="ml-2 h-5 w-5"
+                          aria-hidden="true"
+                        />
+                      </button>
+                      {isRoleDropdownOpen && (
+                        <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                          <div
+                            className="py-1"
+                            role="menu"
+                            aria-orientation="vertical"
+                            aria-labelledby="options-menu"
+                          >
+                            {roles.map((role) => (
+                              <button
+                                key={role}
+                                onClick={() => {
+                                  setSelectedRole(role);
+                                  setIsRoleDropdownOpen(false);
+                                }}
+                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                                role="menuitem"
+                              >
+                                {role}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() =>
+                        switchUserRole(
+                          selectedUser.username,
+                          selectedRole,
+                          "add"
+                        )
+                      }
+                      className="bg-blue-500 text-white px-2 py-1 rounded text-sm flex items-center"
+                    >
+                      <UserPlus className="w-4 h-4 mr-1" /> Add Role
+                    </button>
+                    <button
+                      onClick={() =>
+                        switchUserRole(
+                          selectedUser.username,
+                          selectedRole,
+                          "remove"
+                        )
+                      }
+                      className="bg-yellow-500 text-white px-2 py-1 rounded text-sm flex items-center"
+                    >
+                      <UserMinus className="w-4 h-4 mr-1" /> Remove Role
+                    </button>
+                    <button
+                      onClick={() =>
+                        manageUserStatus(
+                          selectedUser.username,
+                          selectedUser.enabled ? "disable" : "enable"
+                        )
+                      }
+                      className={`${
+                        selectedUser.enabled ? "bg-red-500" : "bg-green-500"
+                      } text-white px-2 py-1 rounded text-sm flex items-center`}
+                    >
+                      {selectedUser.enabled ? (
+                        <>
+                          <Lock className="w-4 h-4 mr-1" /> Disable User
+                        </>
+                      ) : (
+                        <>
+                          <Unlock className="w-4 h-4 mr-1" /> Enable User
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {/* {hasRole("superadmin") && (
+                <div className="mt-4">
+                  <h3 className="text-lg font-semibold mb-2">Manage User</h3>
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() =>
@@ -365,7 +457,7 @@ export default function Profile() {
                     </button>
                   </div>
                 </div>
-              )}
+              )} */}
               <button
                 className="mt-6 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition duration-300"
                 onClick={() => setSelectedUser(null)}
