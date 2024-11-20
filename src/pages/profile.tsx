@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+"use client";
+
+import { useState, useEffect, useRef } from "react";
 import { fetchAuthSession } from "aws-amplify/auth";
 import {
   Mail,
@@ -28,8 +30,8 @@ interface User {
 
 export default function Profile() {
   const roles = ["author", "contentmanager", "viewer", "superadmin"];
-  const [user, setUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[] | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [otherUsers, setOtherUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -37,6 +39,9 @@ export default function Profile() {
   const [userGroups, setUserGroups] = useState<string[]>([]);
   const [selectedRole, setSelectedRole] = useState(roles[0]);
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
+
+  const modalRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   async function fetchUserProfile() {
     try {
@@ -56,11 +61,11 @@ export default function Profile() {
       }
 
       const users = await response.json();
-      const currentUser = users.find(
+      const current = users.find(
         (u: User) => u.username === tokens?.idToken?.payload["cognito:username"]
       );
-      setUser(currentUser);
-      setUsers(users);
+      setCurrentUser(current);
+      setOtherUsers(users.filter((u: User) => u.username !== current.username));
       setLoading(false);
     } catch (err) {
       setError(
@@ -71,39 +76,6 @@ export default function Profile() {
   }
 
   useEffect(() => {
-    async function fetchUserProfile() {
-      try {
-        const { tokens } = await fetchAuthSession();
-        const response = await fetch(
-          "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/list-users",
-          {
-            method: "GET",
-            headers: {
-              Authorization: tokens?.idToken?.toString() as string,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Error: ${response.status} - ${response.statusText}`);
-        }
-
-        const users = await response.json();
-        const currentUser = users.find(
-          (u: User) =>
-            u.username === tokens?.idToken?.payload["cognito:username"]
-        );
-        setUser(currentUser);
-        setUsers(users);
-        setLoading(false);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "An unknown error occurred"
-        );
-        setLoading(false);
-      }
-    }
-
     fetchUserProfile();
   }, []);
 
@@ -135,7 +107,6 @@ export default function Profile() {
       setActionMessage(
         `Role ${action === "add" ? "added" : "removed"} successfully`
       );
-      // Refresh user list
       fetchUserProfile();
     } catch (err) {
       setError(
@@ -173,7 +144,6 @@ export default function Profile() {
       setActionMessage(
         `User ${action === "enable" ? "enabled" : "disabled"} successfully`
       );
-      // Refresh user list
       fetchUserProfile();
     } catch (err) {
       setError(
@@ -200,6 +170,28 @@ export default function Profile() {
       }
     };
     getUserInfo();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
+        setSelectedUser(null);
+      }
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsRoleDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   const hasRole = (role: string) => {
@@ -229,7 +221,7 @@ export default function Profile() {
     );
   }
 
-  if (!user) {
+  if (!currentUser) {
     return (
       <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md">
         <AlertCircle className="inline-block mr-2" />
@@ -239,7 +231,7 @@ export default function Profile() {
   }
 
   return (
-    <Layout username={user.username} signOut={() => {}}>
+    <Layout username={currentUser.username} signOut={() => {}}>
       <div className="min-h-screen p-8">
         <div className="max-w-6xl mx-auto">
           {actionMessage && (
@@ -248,7 +240,7 @@ export default function Profile() {
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {users?.map((user) => (
+            {otherUsers.map((user) => (
               <div
                 key={user.attributes.sub}
                 className="bg-white rounded-lg shadow-lg overflow-hidden transform transition duration-300 hover:scale-105 cursor-pointer"
@@ -296,7 +288,10 @@ export default function Profile() {
         </div>
         {selectedUser && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg p-8 max-w-md w-full">
+            <div
+              ref={modalRef}
+              className="bg-white rounded-lg p-8 max-w-md w-full"
+            >
               <h2 className="text-2xl font-bold mb-4">
                 {selectedUser.username}
               </h2>
@@ -324,7 +319,7 @@ export default function Profile() {
                 <div className="mt-4">
                   <h3 className="text-lg font-semibold mb-2">Manage User</h3>
                   <div className="flex flex-wrap gap-2 items-center">
-                    <div className="relative">
+                    <div ref={dropdownRef} className="relative">
                       <button
                         onClick={() =>
                           setIsRoleDropdownOpen(!isRoleDropdownOpen)
@@ -410,54 +405,7 @@ export default function Profile() {
                   </div>
                 </div>
               )}
-              {/* {hasRole("superadmin") && (
-                <div className="mt-4">
-                  <h3 className="text-lg font-semibold mb-2">Manage User</h3>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() =>
-                        switchUserRole(selectedUser.username, "author", "add")
-                      }
-                      className="bg-blue-500 text-white px-2 py-1 rounded text-sm flex items-center"
-                    >
-                      <UserPlus className="w-4 h-4 mr-1" /> Add Author
-                    </button>
-                    <button
-                      onClick={() =>
-                        switchUserRole(
-                          selectedUser.username,
-                          "author",
-                          "remove"
-                        )
-                      }
-                      className="bg-yellow-500 text-white px-2 py-1 rounded text-sm flex items-center"
-                    >
-                      <UserMinus className="w-4 h-4 mr-1" /> Remove Author
-                    </button>
-                    <button
-                      onClick={() =>
-                        manageUserStatus(
-                          selectedUser.username,
-                          selectedUser.enabled ? "disable" : "enable"
-                        )
-                      }
-                      className={`${
-                        selectedUser.enabled ? "bg-red-500" : "bg-green-500"
-                      } text-white px-2 py-1 rounded text-sm flex items-center`}
-                    >
-                      {selectedUser.enabled ? (
-                        <>
-                          <Lock className="w-4 h-4 mr-1" /> Disable User
-                        </>
-                      ) : (
-                        <>
-                          <Unlock className="w-4 h-4 mr-1" /> Enable User
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )} */}
+
               <button
                 className="mt-6 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition duration-300"
                 onClick={() => setSelectedUser(null)}
