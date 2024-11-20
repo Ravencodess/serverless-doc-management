@@ -11,6 +11,7 @@ import {
   Search,
   ArrowLeft,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface File {
   name: string;
@@ -89,72 +90,82 @@ function FileUpload({
       return;
     }
 
-    try {
-      setUploading(true);
-      setError(null);
+    toast.promise(
+      (async () => {
+        try {
+          setUploading(true);
+          setError(null);
 
-      const { tokens } = await fetchAuthSession();
-      const response = await fetch(
-        "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/generate-upload-url",
-        {
-          method: "POST",
-          headers: {
-            Authorization: tokens?.idToken?.toString() as string,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            fileName: selectedFile.name,
-            fileType: selectedFile.type,
-            targetPath: uploadPath,
-          }),
-        }
-      );
+          const { tokens } = await fetchAuthSession();
+          const response = await fetch(
+            "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/generate-upload-url",
+            {
+              method: "POST",
+              headers: {
+                Authorization: tokens?.idToken?.toString() as string,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                fileName: selectedFile.name,
+                fileType: selectedFile.type,
+                targetPath: uploadPath,
+              }),
+            }
+          );
 
-      if (!response.ok) throw new Error("Failed to get upload URL");
+          if (!response.ok) throw new Error("Failed to get upload URL");
 
-      const { uploadUrl } = await response.json();
+          const { uploadUrl } = await response.json();
 
-      const xhr = new XMLHttpRequest();
+          const xhr = new XMLHttpRequest();
 
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const percentComplete = (event.loaded / event.total) * 100;
-          setUploadProgress(percentComplete);
-        }
-      };
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const percentComplete = (event.loaded / event.total) * 100;
+              setUploadProgress(percentComplete);
+            }
+          };
 
-      await new Promise<void>((resolve, reject) => {
-        xhr.onload = () => {
-          if (xhr.status === 200) {
-            resolve();
-          } else {
-            reject(new Error("Upload failed"));
+          await new Promise<void>((resolve, reject) => {
+            xhr.onload = () => {
+              if (xhr.status === 200) {
+                resolve();
+              } else {
+                reject(new Error("Upload failed"));
+              }
+            };
+
+            xhr.onerror = () => reject(new Error("Upload failed"));
+
+            xhr.open("PUT", uploadUrl);
+            xhr.setRequestHeader("Content-Type", selectedFile.type);
+            xhr.send(selectedFile as unknown as Document);
+          });
+
+          setUploadSuccess(true);
+          if (onUploadComplete) {
+            onUploadComplete();
           }
-        };
 
-        xhr.onerror = () => reject(new Error("Upload failed"));
-
-        xhr.open("PUT", uploadUrl);
-        xhr.setRequestHeader("Content-Type", selectedFile.type);
-        xhr.send(selectedFile as unknown as Document);
-      });
-
-      setUploadSuccess(true);
-      if (onUploadComplete) {
-        onUploadComplete();
+          setTimeout(() => {
+            resetUpload();
+          }, 3000);
+        } catch (err) {
+          setError(
+            err instanceof Error ? err.message : "An unknown error occurred"
+          );
+          console.error("Upload error:", err);
+          throw err;
+        } finally {
+          setUploading(false);
+        }
+      })(),
+      {
+        loading: "Uploading file...",
+        success: "File uploaded successfully!",
+        error: "Failed to upload file",
       }
-
-      setTimeout(() => {
-        resetUpload();
-      }, 3000);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "An unknown error occurred"
-      );
-      console.error("Upload error:", err);
-    } finally {
-      setUploading(false);
-    }
+    );
   };
 
   if (!canUploadToPath(currentPath!)) {
@@ -343,121 +354,146 @@ function FileList({
   }, [refreshTrigger]);
 
   const handleDownload = async (fileKey: string, fileName: string) => {
-    try {
-      setDownloadLoading((prev) => ({ ...prev, [fileKey]: true }));
+    toast.promise(
+      (async () => {
+        try {
+          setDownloadLoading((prev) => ({ ...prev, [fileKey]: true }));
 
-      const { tokens } = await fetchAuthSession();
-      const response = await fetch(
-        "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/generate-download-url",
-        {
-          method: "POST",
-          headers: {
-            Authorization: tokens?.idToken?.toString() as string,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ key: fileKey }),
+          const { tokens } = await fetchAuthSession();
+          const response = await fetch(
+            "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/generate-download-url",
+            {
+              method: "POST",
+              headers: {
+                Authorization: tokens?.idToken?.toString() as string,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ key: fileKey }),
+            }
+          );
+
+          if (!response.ok) throw new Error("Failed to generate download URL");
+
+          const { downloadUrl } = await response.json();
+
+          const newTab = window.open(downloadUrl, "_blank");
+
+          if (newTab) {
+            newTab.focus();
+          } else {
+            const link = document.createElement("a");
+            link.href = downloadUrl;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+        } catch (err) {
+          throw new Error(
+            `Failed to download ${fileName}: ${
+              err instanceof Error ? err.message : String(err)
+            }`
+          );
+        } finally {
+          setDownloadLoading((prev) => ({ ...prev, [fileKey]: false }));
         }
-      );
-
-      if (!response.ok) throw new Error("Failed to generate download URL");
-
-      const { downloadUrl } = await response.json();
-
-      // Open the download URL in a new tab (target="_blank")
-      const newTab = window.open(downloadUrl, "_blank");
-
-      if (newTab) {
-        newTab.focus();
-      } else {
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      })(),
+      {
+        loading: "Generating download link...",
+        success: "File download started!",
+        error: (err) => err.message,
       }
-    } catch (err) {
-      setError(
-        `Failed to download ${fileName}: ${
-          err instanceof Error ? err.message : String(err)
-        }`
-      );
-    } finally {
-      setDownloadLoading((prev) => ({ ...prev, [fileKey]: false }));
-    }
+    );
   };
 
   const handleDelete = async (fileKey: string, fileName: string) => {
-    try {
-      setDeleteLoading((prev) => ({ ...prev, [fileKey]: true }));
+    toast.promise(
+      (async () => {
+        try {
+          setDeleteLoading((prev) => ({ ...prev, [fileKey]: true }));
 
-      const { tokens } = await fetchAuthSession();
-      const response = await fetch(
-        "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/delete-file",
-        {
-          method: "POST",
-          headers: {
-            Authorization: tokens?.idToken?.toString() as string,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ key: fileKey }),
+          const { tokens } = await fetchAuthSession();
+          const response = await fetch(
+            "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/delete-file",
+            {
+              method: "POST",
+              headers: {
+                Authorization: tokens?.idToken?.toString() as string,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ key: fileKey }),
+            }
+          );
+
+          if (!response.ok) throw new Error("Failed to delete file");
+
+          setAllFiles((prev) => prev.filter((file) => file.key !== fileKey));
+          setFileToDelete(null);
+          setShowDeleteModal(false);
+        } catch (err) {
+          throw new Error(
+            `Failed to delete ${fileName}: ${
+              err instanceof Error ? err.message : String(err)
+            }`
+          );
+        } finally {
+          setDeleteLoading((prev) => ({ ...prev, [fileKey]: false }));
         }
-      );
-
-      if (!response.ok) throw new Error("Failed to delete file");
-
-      setAllFiles((prev) => prev.filter((file) => file.key !== fileKey));
-      setFileToDelete(null);
-      setShowDeleteModal(false);
-    } catch (err) {
-      setError(
-        `Failed to delete ${fileName}: ${
-          err instanceof Error ? err.message : String(err)
-        }`
-      );
-    } finally {
-      setDeleteLoading((prev) => ({ ...prev, [fileKey]: false }));
-    }
+      })(),
+      {
+        loading: "Deleting file...",
+        success: "File deleted successfully!",
+        error: (err) => err.message,
+      }
+    );
   };
 
   const handleMove = async (fileKey: string, destination: string) => {
-    try {
-      setMoveLoading((prev) => ({ ...prev, [fileKey]: true }));
+    toast.promise(
+      (async () => {
+        try {
+          setMoveLoading((prev) => ({ ...prev, [fileKey]: true }));
 
-      const { tokens } = await fetchAuthSession();
-      const response = await fetch(
-        "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/move-file",
-        {
-          method: "POST",
-          headers: {
-            Authorization: tokens?.idToken?.toString() as string,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            sourceKey: fileKey,
-            destinationPath: destination,
-          }),
+          const { tokens } = await fetchAuthSession();
+          const response = await fetch(
+            "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/move-file",
+            {
+              method: "POST",
+              headers: {
+                Authorization: tokens?.idToken?.toString() as string,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                sourceKey: fileKey,
+                destinationPath: destination,
+              }),
+            }
+          );
+
+          if (!response.ok) throw new Error("Failed to move file");
+
+          setAllFiles((prev) => prev.filter((file) => file.key !== fileKey));
+          fetchFiles();
+          setFileToMove(null);
+          setMoveDestination("");
+          setShowMoveModal(false);
+        } catch (err) {
+          throw new Error(
+            `Failed to move file: ${
+              err instanceof Error ? err.message : String(err)
+            }`
+          );
+        } finally {
+          setMoveLoading((prev) => ({ ...prev, [fileKey]: false }));
         }
-      );
-
-      if (!response.ok) throw new Error("Failed to move file");
-
-      setAllFiles((prev) => prev.filter((file) => file.key !== fileKey));
-      fetchFiles();
-      setFileToMove(null);
-      setMoveDestination("");
-      setShowMoveModal(false);
-    } catch (err) {
-      setError(
-        `Failed to move file: ${
-          err instanceof Error ? err.message : String(err)
-        }`
-      );
-    } finally {
-      setMoveLoading((prev) => ({ ...prev, [fileKey]: false }));
-    }
+      })(),
+      {
+        loading: "Moving file...",
+        success: "File moved successfully!",
+        error: (err) => err.message,
+      }
+    );
   };
-
   const handleDeleteClick = (file: File) => {
     setFileToDelete(file);
     setShowDeleteModal(true);

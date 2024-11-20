@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Layout from "./dashlayout";
 import { useAuthenticator } from "@aws-amplify/ui-react";
+import toast from "react-hot-toast";
 
 interface User {
   username: string;
@@ -87,74 +88,100 @@ export default function Profile() {
     role: string,
     action: "add" | "remove"
   ) {
-    try {
-      const { tokens } = await fetchAuthSession();
-      const response = await fetch(
-        "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/switch-roles",
-        {
-          method: "POST",
-          headers: {
-            Authorization: tokens?.idToken?.toString() as string,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ username, role, action }),
+    toast.promise(
+      (async () => {
+        try {
+          const { tokens } = await fetchAuthSession();
+          const response = await fetch(
+            "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/switch-roles",
+            {
+              method: "POST",
+              headers: {
+                Authorization: tokens?.idToken?.toString() as string,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ username, role, action }),
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(
+              `Error: ${response.status} - ${response.statusText}`
+            );
+          }
+
+          const result = await response.json();
+          console.log("Switch Role Response:", result);
+          setActionMessage(
+            `Role ${action === "add" ? "added" : "removed"} successfully`
+          );
+          fetchUserProfile();
+          return result;
+        } catch (err) {
+          throw new Error(
+            err instanceof Error
+              ? err.message
+              : "An error occurred while switching roles"
+          );
         }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status} - ${response.statusText}`);
+      })(),
+      {
+        loading: `${action === "add" ? "Adding" : "Removing"} role...`,
+        success: `Role ${action === "add" ? "added" : "removed"} successfully`,
+        error: (err) => `Failed to ${action} role: ${err.message}`,
       }
-
-      const result = await response.json();
-      console.log("Switch Role Response:", result);
-      setActionMessage(
-        `Role ${action === "add" ? "added" : "removed"} successfully`
-      );
-      fetchUserProfile();
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "An error occurred while switching roles"
-      );
-    }
+    );
   }
 
   async function manageUserStatus(
     username: string,
     action: "disable" | "enable"
   ) {
-    try {
-      const { tokens } = await fetchAuthSession();
-      const response = await fetch(
-        "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/manage-user",
-        {
-          method: "POST",
-          headers: {
-            Authorization: tokens?.idToken?.toString() as string,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ username, action }),
+    toast.promise(
+      (async () => {
+        try {
+          const { tokens } = await fetchAuthSession();
+          const response = await fetch(
+            "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/manage-user",
+            {
+              method: "POST",
+              headers: {
+                Authorization: tokens?.idToken?.toString() as string,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ username, action }),
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(
+              `Error: ${response.status} - ${response.statusText}`
+            );
+          }
+
+          const result = await response.json();
+          console.log("Manage User Response:", result);
+          setActionMessage(
+            `User ${action === "enable" ? "enabled" : "disabled"} successfully`
+          );
+          fetchUserProfile();
+          return result;
+        } catch (err) {
+          throw new Error(
+            err instanceof Error
+              ? err.message
+              : "An error occurred while managing user status"
+          );
         }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status} - ${response.statusText}`);
+      })(),
+      {
+        loading: `${action === "enable" ? "Enabling" : "Disabling"} user...`,
+        success: `User ${
+          action === "enable" ? "enabled" : "disabled"
+        } successfully`,
+        error: (err) => `Failed to ${action} user: ${err.message}`,
       }
-
-      const result = await response.json();
-      console.log("Manage User Response:", result);
-      setActionMessage(
-        `User ${action === "enable" ? "enabled" : "disabled"} successfully`
-      );
-      fetchUserProfile();
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "An error occurred while managing user status"
-      );
-    }
+    );
   }
 
   useEffect(() => {
@@ -241,7 +268,7 @@ export default function Profile() {
       signOut={signOut}
       showProfile={showProfile}
     >
-      <div className="min-h-screen p-8">
+      <div className="p-8">
         <div className="max-w-6xl mx-auto">
           {actionMessage && (
             <div className="mb-4 p-4 bg-green-100 text-green-700 rounded-md">
