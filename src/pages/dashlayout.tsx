@@ -6,9 +6,15 @@ interface LayoutProps {
   children: React.ReactNode;
   username: string;
   signOut: () => void;
+  showProfile?: boolean;
 }
 
-export default function Layout({ children, username, signOut }: LayoutProps) {
+export default function Layout({
+  children,
+  username,
+  signOut,
+  showProfile,
+}: LayoutProps) {
   const location = useLocation();
 
   return (
@@ -31,17 +37,19 @@ export default function Layout({ children, username, signOut }: LayoutProps) {
             Home
           </Link>
 
-          <Link
-            to="/profile"
-            className={`flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-700 ${
-              location.pathname === "/profile"
-                ? "bg-gray-200 dark:bg-gray-700"
-                : ""
-            }`}
-          >
-            <User className="mr-2 h-5 w-5" />
-            Profile
-          </Link>
+          {showProfile && (
+            <Link
+              to="/profile"
+              className={`flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-700 ${
+                location.pathname === "/profile"
+                  ? "bg-gray-200 dark:bg-gray-700"
+                  : ""
+              }`}
+            >
+              <User className="mr-2 h-5 w-5" />
+              Profile
+            </Link>
+          )}
           <div className="absolute bottom-4 px-4">
             <button
               onClick={signOut}
@@ -58,7 +66,7 @@ export default function Layout({ children, username, signOut }: LayoutProps) {
       <main className="flex-1 overflow-y-auto p-8">
         <div className="mx-auto max-w-4xl">
           <header className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white capitalize">
               Welcome, {username || "User"}
             </h1>
             <p className="mt-2 text-gray-600 dark:text-gray-400">
