@@ -15,6 +15,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import Layout from "./dashlayout";
+import { useAuthenticator } from "@aws-amplify/ui-react";
 
 interface User {
   username: string;
@@ -39,6 +40,8 @@ export default function Profile() {
   const [userGroups, setUserGroups] = useState<string[]>([]);
   const [selectedRole, setSelectedRole] = useState(roles[0]);
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
+  const { signOut } = useAuthenticator((context) => [context.user]);
+  const [showProfile, setShowProfile] = useState(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -161,9 +164,11 @@ export default function Profile() {
         const payload = tokens?.idToken?.payload;
         if (payload) {
           const groups = payload["cognito:groups"] || [];
-          setUserGroups(
-            typeof groups === "string" ? [groups] : (groups as string[])
-          );
+          const userGroups =
+            typeof groups === "string" ? [groups] : (groups as string[]);
+          setUserGroups(userGroups);
+          console.log(userGroups);
+          setShowProfile(userGroups.includes("superadmin"));
         }
       } catch (error) {
         console.error("Error fetching user info: ", error);
@@ -231,7 +236,11 @@ export default function Profile() {
   }
 
   return (
-    <Layout username={currentUser.username} signOut={() => {}}>
+    <Layout
+      username={currentUser.username}
+      signOut={signOut}
+      showProfile={showProfile}
+    >
       <div className="min-h-screen p-8">
         <div className="max-w-6xl mx-auto">
           {actionMessage && (
