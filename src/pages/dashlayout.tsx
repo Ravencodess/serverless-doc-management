@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, Folder, User, LogOut } from "lucide-react";
+import { Home, User, LogOut } from "lucide-react";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -30,17 +30,7 @@ export default function Layout({ children, username, signOut }: LayoutProps) {
             <Home className="mr-2 h-5 w-5" />
             Home
           </Link>
-          <Link
-            to="/files"
-            className={`flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-700 ${
-              location.pathname === "/files"
-                ? "bg-gray-200 dark:bg-gray-700"
-                : ""
-            }`}
-          >
-            <Folder className="mr-2 h-5 w-5" />
-            Files
-          </Link>
+
           <Link
             to="/profile"
             className={`flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-700 ${

@@ -23,12 +23,10 @@ interface File {
 }
 
 function FileUpload({
-  currentPath,
   userGroups,
   username,
   onUploadComplete,
 }: {
-  currentPath?: string;
   userGroups: string[];
   username: string;
   onUploadComplete: () => void;
@@ -39,6 +37,7 @@ function FileUpload({
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [customPath, setCustomPath] = useState("");
+  const currentPath = "";
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -272,10 +271,6 @@ function FileList({
   hasRole,
 }: {
   refreshTrigger: number;
-  onPathChange: (path: string) => void;
-  currentPath?: string;
-  username: string;
-  userGroups: string[];
   hasRole: (role: string) => boolean;
 }) {
   const [currentPath, setCurrentPath] = useState("");
@@ -938,7 +933,6 @@ function FileList({
 export default function Dashboard() {
   const { signOut } = useAuthenticator((context) => [context.user]);
   const [error, setError] = useState<string | null>(null);
-  const [currentPath, setCurrentPath] = useState<string | undefined>();
   const [refreshKey, setRefreshKey] = useState(0);
   const [username, setUsername] = useState("");
   const [userGroups, setUserGroups] = useState<string[]>([]);
@@ -975,17 +969,6 @@ export default function Dashboard() {
     getUserInfo();
   }, []);
 
-  const handlePathChange = (newPath: string) => {
-    const normalizedPath = newPath.endsWith("/") ? newPath : `${newPath}/`;
-    setCurrentPath(normalizedPath);
-
-    if (hasRole("author") && !normalizedPath.startsWith(`${username}/`)) {
-      setError("Note: You can only upload files in your personal folder.");
-    } else {
-      setError(null);
-    }
-  };
-
   const handleUploadComplete = () => {
     setRefreshKey((prev) => prev + 1);
   };
@@ -1003,7 +986,6 @@ export default function Dashboard() {
       <>
         <div className="mb-8">
           <FileUpload
-            currentPath={currentPath}
             userGroups={userGroups}
             username={username}
             onUploadComplete={handleUploadComplete}
@@ -1011,14 +993,7 @@ export default function Dashboard() {
         </div>
 
         <div>
-          <FileList
-            refreshTrigger={refreshKey}
-            onPathChange={handlePathChange}
-            currentPath={currentPath}
-            username={username}
-            userGroups={userGroups}
-            hasRole={hasRole}
-          />
+          <FileList refreshTrigger={refreshKey} hasRole={hasRole} />
         </div>
 
         {error && (
