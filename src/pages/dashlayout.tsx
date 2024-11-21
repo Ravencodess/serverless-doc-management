@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Home, User, LogOut } from "lucide-react";
+import { Toaster } from "react-hot-toast";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -20,7 +21,7 @@ export default function Layout({
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
       {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-md dark:bg-gray-800">
+      <aside className="w-64 bg-white shadow-md dark:bg-gray-800 h-screen">
         <div className="p-4">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
             Dashboard
@@ -76,6 +77,7 @@ export default function Layout({
           {children}
         </div>
       </main>
+      <Toaster />
     </div>
   );
 }
