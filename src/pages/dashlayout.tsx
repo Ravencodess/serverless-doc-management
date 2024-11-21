@@ -19,12 +19,12 @@ export default function Layout({
   const location = useLocation();
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-md dark:bg-gray-800 h-screen">
+      <aside className="w-64 bg-white shadow-md dark:bg-gray-800 h-screen overflow-hidden">
         <div className="p-4">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-            Dashboard
+          <h2 className="text-sm font-semibold text-gray-800 dark:text-white">
+            Phenomenal Energy Document Management System
           </h2>
         </div>
         <nav className="mt-4">
@@ -64,7 +64,7 @@ export default function Layout({
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-8">
+      <main className="flex-1 overflow-y-auto p-8 h-screen ">
         <div className="mx-auto max-w-4xl">
           <header className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white capitalize">
@@ -74,7 +74,9 @@ export default function Layout({
               Manage your files and folders
             </p>
           </header>
-          {children}
+          <div className="flex-1 overflow-hidden overflow-y-auto">
+            {children}
+          </div>
         </div>
       </main>
       <Toaster />
