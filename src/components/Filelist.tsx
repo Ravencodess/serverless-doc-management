@@ -317,6 +317,7 @@ function FileList({
       );
       if (!response.ok) throw new Error("Failed to fetch files");
       const data = await response.json();
+      console.log(data);
       setAllFiles(data.files);
     } catch (err) {
       setError(
@@ -659,6 +660,9 @@ function FileList({
                   File Name
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Path
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Size
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -685,6 +689,10 @@ function FileList({
                   );
                 };
 
+                const filePath = file.key.includes("/")
+                  ? file.key.split("/").slice(0, -1).join("/")
+                  : "root";
+
                 return (
                   <tr key={file.key} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -694,6 +702,9 @@ function FileList({
                           (My File)
                         </span>
                       )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {filePath}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatFileSize(file.size)}
