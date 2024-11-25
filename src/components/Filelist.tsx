@@ -12,6 +12,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import eventDispatcher from "./eventDispatcher";
 
 interface File {
   name: string;
@@ -38,7 +39,28 @@ function FileUpload({
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [customPath, setCustomPath] = useState("");
-  const currentPath = "";
+  const [currentPath, setCurrentPath] = useState("");
+
+  useEffect(() => {
+    const path = localStorage.getItem("currentPath");
+    if (path) {
+      setCurrentPath(path);
+    }
+
+    const handlePathChange = (event: Event) => {
+      const newPath = (event as CustomEvent).detail;
+      setCurrentPath(newPath);
+    };
+
+    eventDispatcher.addEventListener("currentPathChange", handlePathChange);
+
+    return () => {
+      eventDispatcher.removeEventListener(
+        "currentPathChange",
+        handlePathChange
+      );
+    };
+  }, []);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -84,7 +106,13 @@ function FileUpload({
       return;
     }
 
-    const uploadPath = customPath || currentPath;
+    if (currentPath === "") {
+      setError("Please select a folder to upload to");
+      toast("Please select a folder to upload to");
+      return;
+    }
+
+    const uploadPath = currentPath ?? customPath;
     if (!canUploadToPath(uploadPath!)) {
       setError("You do not have permission to upload to this location");
       return;
@@ -176,14 +204,14 @@ function FileUpload({
     <div className="bg-white rounded-lg shadow-md p-6">
       <h2 className="text-xl font-semibold mb-4">Upload Document</h2>
       <div className="mb-4 bg-gray-50 rounded p-3">
-        <p className="text-sm text-gray-600">
+        <p className="text-lg text-gray-600">
           Current upload location:{" "}
-          <span className="font-medium">{currentPath || "Root"}</span>
+          <span className="font-bold">{currentPath || "Root"}</span>
         </p>
         {selectedFile && (
           <p className="mt-1 text-sm text-gray-600">
             File will be uploaded to:{" "}
-            <span className="font-medium">
+            <span className="font-bold">
               {customPath || currentPath}
               {selectedFile.name}
             </span>
@@ -299,6 +327,7 @@ function FileList({
   const [moveDestination, setMoveDestination] = useState("");
   const [folders, setFolders] = useState<string[]>([]);
   const [allFiles, setAllFiles] = useState<File[]>([]);
+  console.log({ allFiles, folders });
   const [searchQuery, setSearchQuery] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showMoveModal, setShowMoveModal] = useState(false);
@@ -315,6 +344,7 @@ function FileList({
           },
         }
       );
+
       if (!response.ok) throw new Error("Failed to fetch files");
       const data = await response.json();
       console.log(data);
@@ -328,11 +358,14 @@ function FileList({
     }
   };
 
-  const fetchFolders = async () => {
+  const fetchFolders = async (path: string = "") => {
     try {
+      setLoading(true);
       const { tokens } = await fetchAuthSession();
       const response = await fetch(
-        "https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/list-folders",
+        `https://nd1hhxi96h.execute-api.us-east-1.amazonaws.com/api/list-folders?path=${encodeURIComponent(
+          path
+        )}`,
         {
           headers: {
             Authorization: tokens?.idToken?.toString() as string,
@@ -346,6 +379,8 @@ function FileList({
       setError(
         err instanceof Error ? err.message : "An unknown error occurred"
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -549,8 +584,15 @@ function FileList({
     (folder) => folder.startsWith(currentPath) && folder !== currentPath
   );
 
-  const onPathChange = (newPath: React.SetStateAction<string>) => {
+  const onPathChange = (newPath: string) => {
     setCurrentPath(newPath);
+    fetchFolders(newPath);
+    localStorage.setItem("currentPath", newPath);
+
+    const pathChangeEvent = new CustomEvent("currentPathChange", {
+      detail: newPath,
+    });
+    eventDispatcher.dispatchEvent(pathChangeEvent);
   };
 
   if (loading) {

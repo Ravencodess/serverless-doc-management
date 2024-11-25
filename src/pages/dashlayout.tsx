@@ -1,7 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Home, User, LogOut } from "lucide-react";
-import { Toaster } from "react-hot-toast";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -17,11 +16,20 @@ export default function Layout({
   showProfile,
 }: LayoutProps) {
   const location = useLocation();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden relative">
       {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-md dark:bg-gray-800 h-screen overflow-hidden">
+      <aside
+        className={`z-30 w-64 bg-white shadow-md dark:bg-gray-800 h-full overflow-hidden transform transition-transform duration-300 md:translate-x-0 ${
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } max-md:fixed max-md:top-0 max-md:left-0`}
+      >
         <div className="p-4">
           <h2 className="text-sm font-semibold text-gray-800 dark:text-white">
             Phenomenal Energy Document Management System
@@ -63,8 +71,36 @@ export default function Layout({
         </nav>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-8 h-screen ">
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-black bg-opacity-50"
+          onClick={toggleSidebar}
+        />
+      )}
+
+      <main className="flex-1 overflow-y-auto p-8 max-h-screen max-md:p-2">
+        <div className="max-md:block md:hidden mb-4">
+          <button
+            onClick={toggleSidebar}
+            className="p-2 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4 6h16M4 12h16m-7 6h7"
+              />
+            </svg>
+          </button>
+        </div>
+
         <div className="mx-auto max-w-4xl">
           <header className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white capitalize">
@@ -79,7 +115,6 @@ export default function Layout({
           </div>
         </div>
       </main>
-      <Toaster />
     </div>
   );
 }
