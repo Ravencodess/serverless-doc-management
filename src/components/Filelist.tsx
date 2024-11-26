@@ -106,14 +106,15 @@ function FileUpload({
       return;
     }
 
-    if (currentPath === "") {
-      setError("Please select a folder to upload to");
-      toast("Please select a folder to upload to");
+    const uploadPath = customPath.trim() || currentPath;
+
+    if (!uploadPath) {
+      setError("Please select or specify a folder to upload to");
+      toast("Please select or enter a folder to upload to");
       return;
     }
 
-    const uploadPath = currentPath ?? customPath;
-    if (!canUploadToPath(uploadPath!)) {
+    if (!canUploadToPath(uploadPath)) {
       setError("You do not have permission to upload to this location");
       return;
     }
@@ -171,6 +172,7 @@ function FileUpload({
           });
 
           setUploadSuccess(true);
+          setCustomPath("");
           if (onUploadComplete) {
             onUploadComplete();
           }
