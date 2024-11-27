@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Home, User, LogOut } from "lucide-react";
+import { Toaster } from "react-hot-toast";
+// import
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -115,6 +117,7 @@ export default function Layout({
           </div>
         </div>
       </main>
+      <Toaster />
     </div>
   );
 }
